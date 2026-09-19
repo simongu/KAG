@@ -24,7 +24,14 @@ from kag.solver.reporter.open_spg_reporter import OpenSPGReporter
 class KagMcpServer(object):
     # ``kag-solve``/``kag-status`` 为冻结契约(M5-B, docs §A.1) → 与独立
     # kag-bridge 双宿主、KAGWeb 零改动；kag-schema/kag-reason 同风格后续扩展。
-    _supported_tools = "qa-pipeline", "kb-retrieve", "kag-solve", "kag-status"
+    _supported_tools = (
+        "qa-pipeline",
+        "kb-retrieve",
+        "kag-solve",
+        "kag-schema",
+        "kag-reason",
+        "kag-status",
+    )
     _default_server_name = "kag"
     _default_sse_port = 3000
 
@@ -110,6 +117,10 @@ class KagMcpServer(object):
                 self._add_kb_retrieve_tool()
             elif name == "kag-solve":
                 self._add_kag_solve_tool()
+            elif name == "kag-schema":
+                self._add_kag_schema_tool()
+            elif name == "kag-reason":
+                self._add_kag_reason_tool()
             elif name == "kag-status":
                 self._add_kag_status_tool()
             else:
@@ -219,6 +230,103 @@ class KagMcpServer(object):
             )
 
         self._mcp_server.add_tool(kag_solve)
+
+    def _add_kag_schema_tool(self) -> None:
+        """冻结契约 kag-schema：SPG 类型清单（只读）。"""
+
+        async def kag_schema() -> str:
+            """Read-only summary of the project's SPG types (for reason-DSL tooling)."""
+            cfg = _load_kag_config()
+            info = _project_info(cfg)
+            try:
+                from knext.reasoner.client import ReasonerClient
+
+                rc = ReasonerClient(
+                    host_addr=info["host_addr"], project_id=int(info["project_id"])
+                )
+                spg = rc.get_reason_schema()
+            except Exception as exc:  # noqa: BLE001 - 工具结果需结构化错误
+                return json.dumps({"error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "project_id": info["project_id"],
+                    "namespace": info["namespace"],
+                    "spg_types": {
+                        name: {"spg_type_enum": str(getattr(v, "spg_type_enum", ""))}
+                        for name, v in spg.items()
+                    },
+                },
+                ensure_ascii=False,
+                default=str,
+            )
+
+        self._mcp_server.add_tool(kag_schema)
+
+    def _add_kag_reason_tool(self) -> None:
+        """冻结契约 kag-reason：reason DSL 图查询（只读），返回表格结果。"""
+
+        async def kag_reason(dsl: str, params: dict = None) -> str:
+            """
+            Run a read-only reason DSL graph query over the bound project.
+
+            Args:
+                dsl: reason DSL (MATCH ... RETURN ...). Node types must use the
+                    namespace-qualified full name (e.g. m0ProbeLive.Person); relation
+                    labels are bare (e.g. workFor); no LIMIT clause is supported.
+                params: placeholder substitution; values are stringified (raw arrays
+                    are accepted and JSON-serialized).
+            """
+            import urllib.request
+
+            cfg = _load_kag_config()
+            info = _project_info(cfg)
+            normalized = {}
+            for key, value in (params or {}).items():
+                if isinstance(value, str):
+                    normalized[str(key)] = value
+                else:
+                    normalized[str(key)] = json.dumps(value, ensure_ascii=False, default=str)
+            url = "%s/public/v1/reason/run" % info["host_addr"].rstrip("/")
+            body = json.dumps(
+                {"projectId": int(info["project_id"]), "dsl": dsl, "params": normalized}
+            ).encode()
+            t0 = time.time()
+
+            def _run():
+                req = urllib.request.Request(
+                    url, data=body, method="POST", headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=125) as resp:
+                    return json.loads(resp.read())
+
+            try:
+                # 同步阻塞（HTTP 往返 + 服务端同步推理）——放线程池避免卡死事件循环
+                resp_json = await asyncio.wait_for(asyncio.to_thread(_run), timeout=125)
+            except asyncio.TimeoutError:
+                return json.dumps({"error": "reason 超时（>125s）"}, ensure_ascii=False)
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps({"error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=False, default=str)
+            task = (resp_json or {}).get("task") or {}
+            status = str(task.get("status") or "")
+            table = task.get("resultTableResult") or {}
+            rows = list(table.get("rows") or [])
+            out = {
+                "status": status or "UNKNOWN",
+                "header": list(table.get("header") or []),
+                "rows": rows[:200],
+                "row_count": int(table.get("total") or len(rows)),
+                "truncated": len(rows) > 200,
+                "cost_ms": int((time.time() - t0) * 1000),
+                "namespace": info["namespace"],
+            }
+            if status != "FINISH":
+                detail = str(task.get("resultMessage") or ("task not finished: %s" % (status or "UNKNOWN")))
+                if len(detail) > 600:
+                    detail = detail[:600].rstrip() + "..."
+                out["error"] = detail
+            return json.dumps(out, ensure_ascii=False, default=str)
+
+        self._mcp_server.add_tool(kag_reason)
 
     def _add_kag_status_tool(self) -> None:
         """冻结契约 kag-status：bridge/项目配置连通性（回显不含凭据）。"""
