@@ -179,24 +179,27 @@ class KagMcpServer(object):
                     this tool is stateless single-turn).
                 use_pipeline: solver pipeline name; defaults to think_pipeline.
             """
-            cfg = _load_kag_config()
-            info = _project_info(cfg)
-            task_id = "mcp_%d" % int(time.time() * 1000)
-            reporter = _MemoryReporter(task_id=task_id, host_addr=None, project_id=info["project_id"])
-            t0 = time.time()
-            try:
-                from kag.solver.main_solver import do_qa_pipeline
-
-                answer = await do_qa_pipeline(
-                    use_pipeline,
-                    question,
-                    cfg,
-                    reporter,
-                    task_id=task_id,
-                    kb_project_ids=[],
+            async with _solve_semaphore:
+                cfg = _load_kag_config()
+                info = _project_info(cfg)
+                task_id = "mcp_%d" % int(time.time() * 1000)
+                reporter = _MemoryReporter(
+                    task_id=task_id, host_addr=None, project_id=info["project_id"]
                 )
-            finally:
-                await reporter.stop()
+                t0 = time.time()
+                try:
+                    from kag.solver.main_solver import do_qa_pipeline
+
+                    answer = await do_qa_pipeline(
+                        use_pipeline,
+                        question,
+                        cfg,
+                        reporter,
+                        task_id=task_id,
+                        kb_project_ids=[],
+                    )
+                finally:
+                    await reporter.stop()
             stream_data = {}
             try:
                 content, _status, _metrics = reporter.generate_report_data()
@@ -290,4 +293,9 @@ def _project_info(cfg):
         "project_id": str(p.get("id", "")),
         "host_addr": str(p.get("host_addr", "")),
     }
+
+
+# KAGConfigAccessor/KAG_CONFIG 为进程级全局状态，solve 并发需排队（对齐独立
+# kag-bridge 的 §5.1 R3；评审 M9）。
+_solve_semaphore = asyncio.Semaphore(1)
 
