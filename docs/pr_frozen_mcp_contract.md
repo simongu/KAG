@@ -13,9 +13,9 @@
 
 ### Background / Motivation
 
-KAGWeb (the `kagweb` repository) integrates with KAG through an MCP tool surface and has defined and **frozen** four tool contracts (`kag_solve` / `kag_schema` / `kag_reason` / `kag_status` — inputSchema and return schema frozen since v1). Until now these contracts only existed in the standalone `kag-bridge` (FastMCP, dual transport: stdio + streamable-http).
+OPENKG WebUI (the `kagweb` repository) integrates with KAG through an MCP tool surface and has defined and **frozen** four tool contracts (`kag_solve` / `kag_schema` / `kag_reason` / `kag_status` — inputSchema and return schema frozen since v1). Until now these contracts only existed in the standalone `kag-bridge` (FastMCP, dual transport: stdio + streamable-http).
 
-This PR aligns the **same frozen contracts into the upstream `kag mcp-server`**, making KAG's built-in MCP server a second host (dual-hosting). KAGWeb stays unchanged when switching hosts.
+This PR aligns the **same frozen contracts into the upstream `kag mcp-server`**, making KAG's built-in MCP server a second host (dual-hosting). OPENKG WebUI stays unchanged when switching hosts.
 
 ### Changes
 
@@ -51,7 +51,7 @@ This PR aligns the **same frozen contracts into the upstream `kag mcp-server`**,
 ### Known boundaries (need upstream confirmation)
 
 - **CLI subcommand smoke fails**: `python -m kag.bin.kag_cmds mcp-server --transport stdio --enabled-tools ...` shows `Connection closed` in this environment while direct `KagMcpServer(...).serve()` works — likely stdout pollution from the import chain or arg wiring; this looks like a CLI-wrapper issue, worth verifying upstream.
-- **Tests not wired into KAG CI yet**: the contract-verification scripts live on the KAGWeb side (`kagweb/tests/`); the contract test seeds can be moved here if approved.
+- **Tests not wired into KAG CI yet**: the contract-verification scripts live on the OPENKG WebUI side (`kagweb/tests/`); the contract test seeds can be moved here if approved.
 - Tool surface keeps the existing `enabled-tools` allowlist mechanism; the transport layer is untouched.
 
 ### Review focus
@@ -70,9 +70,9 @@ This PR aligns the **same frozen contracts into the upstream `kag mcp-server`**,
 
 ### 背景 / 动机
 
-KAGWeb（`kagweb` 仓库）通过 MCP 工具面与 KAG 集成，已定义并**冻结**了 4 个工具契约（`kag_solve` / `kag_schema` / `kag_reason` / `kag_status`，inputSchema 与返回 schema 自 v1 冻结）。此前这些契约仅存在于独立部署的 `kag-bridge`（FastMCP，stdio + streamable-http 双 transport）。
+OPENKG WebUI（`kagweb` 仓库）通过 MCP 工具面与 KAG 集成，已定义并**冻结**了 4 个工具契约（`kag_solve` / `kag_schema` / `kag_reason` / `kag_status`，inputSchema 与返回 schema 自 v1 冻结）。此前这些契约仅存在于独立部署的 `kag-bridge`（FastMCP，stdio + streamable-http 双 transport）。
 
-本 PR 将同一组冻结契约**对齐进上游 `kag mcp-server`**，使 KAG 自带 MCP server 成为第二宿主（双宿主）；切换宿主时 KAGWeb 侧零改动。
+本 PR 将同一组冻结契约**对齐进上游 `kag mcp-server`**，使 KAG 自带 MCP server 成为第二宿主（双宿主）；切换宿主时 OPENKG WebUI 侧零改动。
 
 ### 变更内容
 
@@ -108,7 +108,7 @@ KAGWeb（`kagweb` 仓库）通过 MCP 工具面与 KAG 集成，已定义并**�
 ### 已知边界（需上游确认）
 
 - **CLI 子命令入口冒烟失败**：`python -m kag.bin.kag_cmds mcp-server --transport stdio --enabled-tools ...` 在本环境冒烟出 `Connection closed`（直接 `KagMcpServer(...).serve()` 正常）——疑似 import 链 stdout 污染或参数接线，属 CLI 包装层问题，建议上游核验该入口
-- **测试未纳入 KAG CI**：本分支的契约验证脚本在 KAGWeb 侧（`kagweb/tests/`）；如认可，可将契约测试种子迁入本仓库
+- **测试未纳入 KAG CI**：本分支的契约验证脚本在 OPENKG WebUI 侧（`kagweb/tests/`）；如认可，可将契约测试种子迁入本仓库
 - 工具面沿用既有 `enabled-tools` 白名单机制，未改 transport 层
 
 ### 请 reviewer 关注
