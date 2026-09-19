@@ -236,8 +236,9 @@ class KagMcpServer(object):
 
         async def kag_schema() -> str:
             """Read-only summary of the project's SPG types (for reason-DSL tooling)."""
-            cfg = _load_kag_config()
-            info = _project_info(cfg)
+            async with _solve_semaphore:
+                cfg = _load_kag_config()
+                info = _project_info(cfg)
             try:
                 from knext.reasoner.client import ReasonerClient
 
@@ -278,8 +279,9 @@ class KagMcpServer(object):
             """
             import urllib.request
 
-            cfg = _load_kag_config()
-            info = _project_info(cfg)
+            async with _solve_semaphore:
+                cfg = _load_kag_config()
+                info = _project_info(cfg)
             normalized = {}
             for key, value in (params or {}).items():
                 if isinstance(value, str):
@@ -334,7 +336,8 @@ class KagMcpServer(object):
         async def kag_status() -> str:
             """Bridge and bound-project configuration health check."""
             try:
-                cfg = _load_kag_config()
+                async with _solve_semaphore:
+                    cfg = _load_kag_config()
             except Exception as exc:  # noqa: BLE001 - 健康探测需把失败转为状态
                 return json.dumps(
                     {"bridge": "error", "error": repr(exc)[:200]}, ensure_ascii=False
