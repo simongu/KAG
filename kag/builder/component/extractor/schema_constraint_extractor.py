@@ -19,7 +19,7 @@ from tenacity import stop_after_attempt, retry, wait_exponential
 
 from kag.interface import ExtractorABC, PromptABC, ExternalGraphLoaderABC
 
-from kag.common.utils import processing_phrases, processing_phrases_preserve_punct, to_camel_case
+from kag.common.utils import processing_phrases_preserve_punct, to_camel_case
 from kag.builder.model.chunk import Chunk
 from kag.builder.model.sub_graph import SubGraph
 from kag.builder.prompt.utils import init_prompt_with_fallback
@@ -367,7 +367,9 @@ class SchemaConstraintExtractor(ExtractorABC):
             graph.add_node(id=s_name, name=s_name, label=s_label, properties=properties)
 
             if "official_name" in record:
-                official_name = processing_phrases_preserve_punct(record["official_name"])
+                official_name = processing_phrases_preserve_punct(
+                    record["official_name"]
+                )
                 if official_name != s_name:
                     graph.add_node(
                         id=official_name,

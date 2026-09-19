@@ -20,7 +20,11 @@ from tenacity import stop_after_attempt, retry, wait_exponential
 from kag.interface import ExtractorABC, PromptABC, ExternalGraphLoaderABC
 
 from kag.common.conf import KAGConstants, KAGConfigAccessor
-from kag.common.utils import processing_phrases, processing_phrases_preserve_punct, to_camel_case
+from kag.common.utils import (
+    processing_phrases,
+    processing_phrases_preserve_punct,
+    to_camel_case,
+)
 from kag.builder.model.chunk import Chunk
 from kag.builder.model.sub_graph import SubGraph
 from kag.common.utils import generate_hash_id

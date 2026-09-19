@@ -181,6 +181,7 @@ class KagMcpServer(object):
     def _add_kag_solve_tool(self) -> None:
         """冻结契约 kag-solve：LLM 增强推理，返回 {answer, reference, subgraph,
         cost_ms, namespace}——与独立 kag-bridge 同契约（M5-B 双宿主）。"""
+
         async def kag_solve(question: str, use_pipeline: str = "think_pipeline") -> str:
             """
             LLM-augmented reasoning over the bound KAG project.
@@ -247,7 +248,9 @@ class KagMcpServer(object):
                 )
                 spg = rc.get_reason_schema()
             except Exception as exc:  # noqa: BLE001 - 工具结果需结构化错误
-                return json.dumps({"error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=False)
+                return json.dumps(
+                    {"error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=False
+                )
             return json.dumps(
                 {
                     "project_id": info["project_id"],
@@ -287,7 +290,9 @@ class KagMcpServer(object):
                 if isinstance(value, str):
                     normalized[str(key)] = value
                 else:
-                    normalized[str(key)] = json.dumps(value, ensure_ascii=False, default=str)
+                    normalized[str(key)] = json.dumps(
+                        value, ensure_ascii=False, default=str
+                    )
             url = "%s/public/v1/reason/run" % info["host_addr"].rstrip("/")
             body = json.dumps(
                 {"projectId": int(info["project_id"]), "dsl": dsl, "params": normalized}
@@ -296,7 +301,10 @@ class KagMcpServer(object):
 
             def _run():
                 req = urllib.request.Request(
-                    url, data=body, method="POST", headers={"Content-Type": "application/json"}
+                    url,
+                    data=body,
+                    method="POST",
+                    headers={"Content-Type": "application/json"},
                 )
                 with urllib.request.urlopen(req, timeout=125) as resp:
                     return json.loads(resp.read())
@@ -307,7 +315,11 @@ class KagMcpServer(object):
             except asyncio.TimeoutError:
                 return json.dumps({"error": "reason 超时（>125s）"}, ensure_ascii=False)
             except Exception as exc:  # noqa: BLE001
-                return json.dumps({"error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=False, default=str)
+                return json.dumps(
+                    {"error": "%s: %s" % (type(exc).__name__, exc)},
+                    ensure_ascii=False,
+                    default=str,
+                )
             task = (resp_json or {}).get("task") or {}
             status = str(task.get("status") or "")
             table = task.get("resultTableResult") or {}
@@ -322,7 +334,10 @@ class KagMcpServer(object):
                 "namespace": info["namespace"],
             }
             if status != "FINISH":
-                detail = str(task.get("resultMessage") or ("task not finished: %s" % (status or "UNKNOWN")))
+                detail = str(
+                    task.get("resultMessage")
+                    or ("task not finished: %s" % (status or "UNKNOWN"))
+                )
                 if len(detail) > 600:
                     detail = detail[:600].rstrip() + "..."
                 out["error"] = detail
@@ -409,4 +424,3 @@ def _project_info(cfg):
 # KAGConfigAccessor/KAG_CONFIG 为进程级全局状态，solve 并发需排队（对齐独立
 # kag-bridge 的 §5.1 R3；评审 M9）。
 _solve_semaphore = asyncio.Semaphore(1)
-

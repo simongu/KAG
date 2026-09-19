@@ -194,9 +194,7 @@ class EmbeddingVectorManager(object):
                     sub_texts.append("none")
             if len(sub_texts) == 0:
                 continue
-            tasks.append(
-                asyncio.create_task(dense_vectorizer.avectorize(sub_texts))
-            )
+            tasks.append(asyncio.create_task(dense_vectorizer.avectorize(sub_texts)))
         results = await asyncio.gather(*tasks)
         return self._coalesce_vectors(results)
 
@@ -223,9 +221,7 @@ class EmbeddingVectorManager(object):
                     sub_texts.append("none")
             if len(sub_texts) == 0:
                 continue
-            tasks.append(
-                asyncio.create_task(sparse_vectorizer.avectorize(sub_texts))
-            )
+            tasks.append(asyncio.create_task(sparse_vectorizer.avectorize(sub_texts)))
         results = await asyncio.gather(*tasks)
         return self._coalesce_vectors(results)
 
