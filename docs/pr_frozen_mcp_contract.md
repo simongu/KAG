@@ -9,7 +9,7 @@
 
 ### Title
 
-**feat(mcp): align `kag mcp-server` with the frozen KAGWeb tool contracts**
+**feat(mcp): align `kag mcp-server` with the frozen OPENKG WebUI tool contracts**
 
 ### Background / Motivation
 
@@ -66,7 +66,7 @@ This PR aligns the **same frozen contracts into the upstream `kag mcp-server`**,
 
 ### 标题
 
-**feat(mcp)：将 `kag mcp-server` 对齐 KAGWeb 冻结工具契约**
+**feat(mcp)：将 `kag mcp-server` 对齐 OPENKG WebUI 冻结工具契约**
 
 ### 背景 / 动机
 
