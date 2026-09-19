@@ -334,7 +334,7 @@ class SchemaFreeExtractor(ExtractorABC):
                 if processing_phrases(entity["name"]) == processing_phrases(
                     entity_name
                 ):
-                    return entity["category"], entity["name"]
+                    return entity["category"], processing_phrases(entity["name"])
             return None, None
 
         for tri in triples:
@@ -346,15 +346,17 @@ class SchemaFreeExtractor(ExtractorABC):
                 continue
             if s_category is None:
                 s_category = OTHER_TYPE
-                s_name = tri[0]
-                sub_graph.add_node(s_name, s_name, s_category)
+                s_name_raw = tri[0]
+                s_name = processing_phrases(s_name_raw)
+                sub_graph.add_node(s_name, s_name_raw, s_category)
             o_category, o_name = get_category_and_name(entities, tri[2])
             if o_name == "":
                 continue
             if o_category is None:
-                o_name = processing_phrases_preserve_punct(tri[2])
+                o_name_raw = processing_phrases_preserve_punct(tri[2])
+                o_name = processing_phrases(o_name_raw)
                 o_category = OTHER_TYPE
-                sub_graph.add_node(o_name, o_name, o_category)
+                sub_graph.add_node(o_name, o_name_raw, o_category)
             edge_type = to_camel_case(tri[1])
             if edge_type:
                 sub_graph.add_edge(s_name, s_category, edge_type, o_name, o_category)
@@ -421,10 +423,11 @@ class SchemaFreeExtractor(ExtractorABC):
         """
 
         for ent in entities:
-            name = processing_phrases_preserve_punct(ent["name"])
+            name_raw = processing_phrases_preserve_punct(ent["name"])
+            name = processing_phrases(name_raw)
             sub_graph.add_node(
                 name,
-                name,
+                name_raw,
                 ent["category"],
                 {
                     "desc": ent.get("description", ""),
@@ -434,11 +437,12 @@ class SchemaFreeExtractor(ExtractorABC):
             )
 
             if "official_name" in ent:
-                official_name = processing_phrases_preserve_punct(ent["official_name"])
+                official_name_raw = processing_phrases_preserve_punct(ent["official_name"])
+                official_name = processing_phrases(official_name_raw)
                 if official_name != name:
                     sub_graph.add_node(
                         official_name,
-                        official_name,
+                        official_name_raw,
                         ent["category"],
                         {
                             "desc": ent.get("description", ""),
